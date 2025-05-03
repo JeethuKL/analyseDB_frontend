@@ -1,8 +1,24 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <header className="w-full flex justify-end gap-4 row-start-1">
+        <Link
+          href="/login"
+          className="rounded-md border border-solid border-black/[.08] dark:border-white/[.145] px-4 py-2 hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] transition-colors"
+        >
+          Log in
+        </Link>
+        <Link
+          href="/signup"
+          className="rounded-md bg-foreground text-background px-4 py-2 hover:bg-[#383838] dark:hover:bg-[#ccc] transition-colors"
+        >
+          Sign up
+        </Link>
+      </header>
+
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <Image
           className="dark:invert"
