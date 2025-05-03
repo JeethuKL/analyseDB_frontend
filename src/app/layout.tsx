@@ -19,11 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="https://cdn.plot.ly/plotly-2.24.1.min.css" />
+        <link rel="stylesheet" href="https://cdn.plot.ly/plotly-2.27.1.min.css" />
       </head>
       <body className={inter.className}>
         <Script
-          src="https://cdn.plot.ly/plotly-latest.min.js"
+          src="https://cdn.plot.ly/plotly-2.27.1.min.js"
           strategy="afterInteractive"
         />
         <AuthProvider>
