@@ -14,12 +14,26 @@ export interface SchemaResponse {
   timestamp: string;
 }
 
+// Update your ChatMessage type
+
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
-  type?: string;
   timestamp: Date | string;
+  type?:
+    | "text"
+    | "error"
+    | "results"
+    | "status"
+    | "correction"
+    | "empty_results"
+    | "clarification";
+
+  // Add these fields to store data with the message
+  visualization?: VisualizationData;
+  results?: QueryResult;
+  sql?: string;
 }
 
 export interface ChatSession {
@@ -32,11 +46,13 @@ export interface ChatSession {
 export interface QueryResult {
   columns: string[];
   rows: Record<string, any>[];
+  [key: string]: any; // Allow for additional properties
 }
 
 export interface VisualizationData {
   type: string;
   plotly_code: string;
+  [key: string]: any; // Allow for additional properties
 }
 
 export interface ConnectionStatus {

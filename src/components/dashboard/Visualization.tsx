@@ -3,12 +3,6 @@ import { VisualizationData } from '@/types';
 
 // This will hold the actual Plotly object
 let Plotly: any = null;
-if (typeof window !== 'undefined') {
-  // Only in browser
-  import('plotly.js-dist').then((mod) => {
-    Plotly = mod.default || mod;
-  });
-}
 
 interface VisualizationProps {
   visualization: VisualizationData;
@@ -17,85 +11,94 @@ interface VisualizationProps {
 export const Visualization = ({ visualization }: VisualizationProps) => {
   const visualizationRef = useRef<HTMLDivElement>(null);
   const [visualizationId] = useState(`viz-${Math.random().toString(36).substr(2, 9)}`);
+  const [plotlyLoaded, setPlotlyLoaded] = useState(false);
   
+  // Track when Plotly is loaded
   useEffect(() => {
-    if (visualization && visualizationRef.current) {
+    if (typeof window !== 'undefined') {
+      import('plotly.js-dist').then((mod) => {
+        Plotly = mod.default || mod;
+        setPlotlyLoaded(true);
+      });
+    }
+  }, []);
+  
+  // Render visualization when data changes or Plotly loads
+  useEffect(() => {
+    if (visualization && visualizationRef.current && plotlyLoaded) {
       try {
-        // Wait for Plotly to be available
-        if (typeof Plotly !== 'undefined' && Plotly) {
-          // Clear previous visualization
-          visualizationRef.current.innerHTML = '';
+        // Clear previous visualization
+        visualizationRef.current.innerHTML = '';
+        
+        // Create a container for the visualization
+        const vizContainer = document.createElement('div');
+        vizContainer.id = visualizationId;
+        vizContainer.style.width = '100%';
+        vizContainer.style.height = '300px';
+        visualizationRef.current.appendChild(vizContainer);
+        
+        // Handle JSON data wrapped in Markdown code blocks
+        if (visualization.plotly_code && visualization.plotly_code.trim().startsWith('```json')) {
+          // Extract JSON from markdown code block
+          const jsonMatch = visualization.plotly_code.match(/```json\s*([\s\S]*?)\s*```/);
           
-          // Create a container for the visualization
-          const vizContainer = document.createElement('div');
-          vizContainer.id = visualizationId;
-          vizContainer.style.width = '100%';
-          vizContainer.style.height = '300px';
-          visualizationRef.current.appendChild(vizContainer);
-          
-          // Handle JSON data wrapped in Markdown code blocks
-          if (visualization.plotly_code && visualization.plotly_code.trim().startsWith('```json')) {
-            // Extract JSON from markdown code block
-            const jsonMatch = visualization.plotly_code.match(/```json\s*([\s\S]*?)\s*```/);
-            
-            if (jsonMatch && jsonMatch[1]) {
-              try {
-                // Parse the extracted JSON
-                const jsonData = JSON.parse(jsonMatch[1].trim());
-                console.log("Parsed JSON data:", jsonData);
-                
-                // If it has columns and rows, render as a chart
-                if (jsonData.columns && jsonData.rows && Array.isArray(jsonData.rows)) {
-                  renderDataResult(jsonData, visualizationId);
-                  return;
-                }
-              } catch (jsonError) {
-                console.error("Error parsing JSON from code block:", jsonError);
+          if (jsonMatch && jsonMatch[1]) {
+            try {
+              // Parse the extracted JSON
+              const jsonData = JSON.parse(jsonMatch[1].trim());
+              console.log("Parsed JSON data:", jsonData);
+              
+              // If it has columns and rows, render as a chart
+              if (jsonData.columns && jsonData.rows && Array.isArray(jsonData.rows)) {
+                renderDataResult(jsonData, visualizationId);
+                return;
               }
+            } catch (jsonError) {
+              console.error("Error parsing JSON from code block:", jsonError);
             }
           }
+        }
+        
+        // Proceed with standard Plotly code handling if above didn't return
+        if (visualization.plotly_code && visualization.plotly_code.trim() !== '') {
+          // Log the code for debugging
+          console.log('Executing Plotly code:', visualization.plotly_code);
           
-          // Proceed with standard Plotly code handling if above didn't return
-          if (visualization.plotly_code && visualization.plotly_code.trim() !== '') {
-            // Log the code for debugging
-            console.log('Executing Plotly code:', visualization.plotly_code);
+          // Safety mechanism to execute only valid plotly code
+          const sanitizedCode = visualization.plotly_code
+            .replace(/document\./g, '') // Prevent direct document access
+            .replace(/window\./g, '');  // Prevent window access
+          
+          // Check if code has valid Plotly commands
+          if (sanitizedCode.includes('Plotly.newPlot') || 
+              sanitizedCode.includes('Plotly.plot') || 
+              sanitizedCode.includes('Plotly.react')) {
             
-            // Safety mechanism to execute only valid plotly code
-            const sanitizedCode = visualization.plotly_code
-              .replace(/document\./g, '') // Prevent direct document access
-              .replace(/window\./g, '');  // Prevent window access
-            
-            // Check if code has valid Plotly commands
-            if (sanitizedCode.includes('Plotly.newPlot') || 
-                sanitizedCode.includes('Plotly.plot') || 
-                sanitizedCode.includes('Plotly.react')) {
-              
-              // Create a function that will execute the code with plotly available
-              const executePlotlyCode = new Function('Plotly', 'container', `
-                try {
-                  ${sanitizedCode}
-                } catch (e) {
-                  console.error('Error executing Plotly code:', e);
-                  return false;
-                }
-                return true;
-              `);
-              
-              // Execute the code with the Plotly library and container ID
-              const success = executePlotlyCode(Plotly, visualizationId);
-              
-              if (!success) {
-                // Fallback to basic chart if execution failed
-                renderBasicChart(visualization, visualizationId);
+            // Create a function that will execute the code with plotly available
+            const executePlotlyCode = new Function('Plotly', 'container', `
+              try {
+                ${sanitizedCode}
+              } catch (e) {
+                console.error('Error executing Plotly code:', e);
+                return false;
               }
-            } else {
-              // If code doesn't contain valid Plotly commands, use basic chart
+              return true;
+            `);
+            
+            // Execute the code with the Plotly library and container ID
+            const success = executePlotlyCode(Plotly, visualizationId);
+            
+            if (!success) {
+              // Fallback to basic chart if execution failed
               renderBasicChart(visualization, visualizationId);
             }
           } else {
-            // Handle case where no plotly_code is provided but there's data
+            // If code doesn't contain valid Plotly commands, use basic chart
             renderBasicChart(visualization, visualizationId);
           }
+        } else {
+          // Handle case where no plotly_code is provided but there's data
+          renderBasicChart(visualization, visualizationId);
         }
       } catch (error) {
         console.error('Error rendering visualization:', error);
@@ -104,7 +107,7 @@ export const Visualization = ({ visualization }: VisualizationProps) => {
         }
       }
     }
-  }, [visualization, visualizationId]);
+  }, [visualization, visualizationId, plotlyLoaded]);
 
   // Function to render data results
   const renderDataResult = (data: { columns: string[], rows: any[] }, containerId: string) => {

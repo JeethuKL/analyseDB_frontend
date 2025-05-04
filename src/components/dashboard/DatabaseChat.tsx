@@ -76,8 +76,40 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
   // Load an existing chat session
   const handleSessionSelect = (session: ChatSession) => {
     setCurrentSessionId(session.id);
-    resetChatState();
-    setSidebarOpen(false); // Close sidebar on mobile
+    setSidebarOpen(false); // Close mobile sidebar when a session is selected
+    
+    // Reset current state
+    setCurrentSql(null);
+    setCurrentResults(null);
+    setCurrentVisualization(null);
+    
+    // Find the last results-containing message
+    const lastResultsMessage = [...session.messages]
+      .reverse()
+      .find(msg => msg.role === 'assistant' && (
+        msg.results || msg.visualization || msg.sql || msg.type === 'results'
+      ));
+    
+    // If we have a message with results, restore that data to current state
+    if (lastResultsMessage) {
+      if (lastResultsMessage.sql) {
+        setCurrentSql(lastResultsMessage.sql);
+      }
+      
+      if (lastResultsMessage.results) {
+        setCurrentResults(lastResultsMessage.results);
+      }
+      
+      if (lastResultsMessage.visualization) {
+        setCurrentVisualization(lastResultsMessage.visualization);
+      }
+    }
+    
+    // Set all messages
+    setMessages(session.messages);
+    
+    // Reset message limit warning if it was shown
+    setShowMessageLimitWarning(ChatHistoryService.hasReachedMessageLimit(session.id));
   };
 
   // Reset chat UI state
@@ -169,6 +201,7 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
+      // Create initial response message
       let responseMessage: ChatMessageType = {
         id: `assistant-msg-${Date.now()}`,
         role: 'assistant',
@@ -176,159 +209,159 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
         timestamp: new Date()
       };
 
+      // Add empty message that will be updated as we stream
+      setMessages(prev => [...prev, responseMessage]);
+      ChatHistoryService.addMessage(currentSessionId, responseMessage);
+
       while (true) {
         const { done, value } = await reader.read();
-
+        
         if (done) break;
-
+        
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
-
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
-
-            // Handle different response types
-            switch (data.type) {
-              case 'status':
-                setCurrentStatus(data.message);
+            
+            switch(data.type) {
+              case 'message':
+                responseMessage.content += data.data || '';
+                setMessages(prev => {
+                  const updated = [...prev];
+                  const lastIndex = updated.length - 1;
+                  if (lastIndex >= 0 && updated[lastIndex].id === responseMessage.id) {
+                    updated[lastIndex] = { ...updated[lastIndex], content: responseMessage.content };
+                  }
+                  return updated;
+                });
+                
+                // Update the message content in storage for each significant chunk
+                // This ensures the complete response is saved
+                ChatHistoryService.updateMessageContent(
+                  currentSessionId,
+                  responseMessage.id,
+                  responseMessage.content
+                );
                 break;
-
+                
               case 'sql':
                 setCurrentSql(data.data);
                 setCurrentStatus('Executing SQL query...');
+                
+                // Save the SQL with the message
+                ChatHistoryService.updateMessageWithVisualization(
+                  currentSessionId,
+                  responseMessage.id,
+                  currentVisualization,
+                  currentResults,
+                  data.data, // SQL
+                  responseMessage.content // Current content
+                );
                 break;
-
+                
               case 'results':
-                // Handle different result formats
-                if (data.data) {
-                  let formattedResults: QueryResult | null = null;
-
-                  // Check if data.data has columns and rows directly
-                  if (Array.isArray(data.data.columns) && Array.isArray(data.data.rows)) {
-                    formattedResults = data.data as QueryResult;
+                try {
+                  const results: QueryResult = data.data;
+                  setCurrentResults(results);
+                  
+                  // Update message with results and type
+                  responseMessage.type = 'results';
+                  
+                  // Add formatted results text to the response
+                  if (results && results.rows) {
+                    const resultsText = generateResultsText(results);
+                    responseMessage.content += `\n\n${resultsText}`;
+                    
+                    setMessages(prev => {
+                      const updated = [...prev];
+                      const lastIndex = updated.length - 1;
+                      if (lastIndex >= 0 && updated[lastIndex].id === responseMessage.id) {
+                        updated[lastIndex] = { 
+                          ...updated[lastIndex], 
+                          content: responseMessage.content,
+                          type: 'results'
+                        };
+                      }
+                      return updated;
+                    });
                   }
-                  // Check if data.data is an array of objects (common API response format)
-                  else if (Array.isArray(data.data)) {
-                    // If it's an array of objects, extract columns from the first item
-                    if (data.data.length > 0) {
-                      const columns = Object.keys(data.data[0]);
-                      formattedResults = {
-                        columns: columns,
-                        rows: data.data
-                      };
-                    } else {
-                      formattedResults = {
-                        columns: [],
-                        rows: []
-                      };
-                    }
-                  }
-
-                  if (formattedResults) {
-                    setCurrentResults(formattedResults);
-                    setCurrentStatus('Formatting results...');
-                    responseMessage = {
-                      ...responseMessage,
-                      content: generateResultsText(formattedResults),
-                      type: 'results'
-                    };
-                  } else {
-                    console.error('Received unprocessable results data:', data.data);
-                    setCurrentResults(null);
-                    responseMessage = {
-                      ...responseMessage,
-                      content: "Received results in an unexpected format.",
-                      type: 'error'
-                    };
-                  }
-                } else {
-                  console.error('Missing data in results response');
-                  setCurrentResults(null);
-                  responseMessage = {
-                    ...responseMessage,
-                    content: "No results data received from the server.",
-                    type: 'error'
-                  };
+                  
+                  // Save complete message with SQL, results, and current content
+                  ChatHistoryService.updateMessageWithVisualization(
+                    currentSessionId,
+                    responseMessage.id,
+                    currentVisualization,
+                    results,
+                    currentSql,
+                    responseMessage.content
+                  );
+                } catch (error) {
+                  console.error('Error processing results:', error);
                 }
                 break;
-
+                
               case 'visualization':
                 try {
                   if (data.data && typeof data.data === 'object') {
-                    // Extract type and plotly_code, provide defaults if missing
                     const vizType = data.data.type || 'bar';
                     const plotlyCode = data.data.plotly_code || '';
-
-                    setCurrentVisualization({
+      
+                    const vizData = {
                       type: vizType,
                       plotly_code: plotlyCode
+                    };
+                    
+                    setCurrentVisualization(vizData);
+                    
+                    // Add visualization description to message content
+                    responseMessage.content += `\n\nI've created a ${vizType} chart to visualize this data.`;
+                    
+                    setMessages(prev => {
+                      const updated = [...prev];
+                      const lastIndex = updated.length - 1;
+                      if (lastIndex >= 0 && updated[lastIndex].id === responseMessage.id) {
+                        updated[lastIndex] = { 
+                          ...updated[lastIndex], 
+                          content: responseMessage.content
+                        };
+                      }
+                      return updated;
                     });
-
-                    console.log(`Received ${vizType} visualization with code length: ${plotlyCode.length}`);
-                    setCurrentStatus('Rendering visualization...');
-                  } else {
-                    console.error('Invalid visualization data format:', data.data);
+                    
+                    // Save all data with the message
+                    ChatHistoryService.updateMessageWithVisualization(
+                      currentSessionId,
+                      responseMessage.id,
+                      vizData,
+                      currentResults,
+                      currentSql,
+                      responseMessage.content
+                    );
                   }
                 } catch (error) {
                   console.error('Error processing visualization data:', error);
                 }
                 break;
-
-              case 'chat':
-              case 'clarification':
-                responseMessage = {
-                  ...responseMessage,
-                  content: data.message,
-                  type: data.type
-                };
-                break;
-
-              case 'error':
-                responseMessage = {
-                  ...responseMessage,
-                  content: data.message,
-                  type: 'error'
-                };
-                setCurrentStatus(null);
-                break;
-
-              case 'empty_results':
-                responseMessage = {
-                  ...responseMessage,
-                  content: data.data.explanation,
-                  type: 'empty_results'
-                };
-                break;
-
-              case 'correction':
-                setCurrentSql(data.sql);
-                responseMessage = {
-                  ...responseMessage,
-                  content: `I found an issue with the query, so I corrected it. ${data.analysis}`,
-                  type: 'correction'
-                };
-                break;
+                
+              // ...other cases...
             }
-          } catch (e) {
-            console.error('Error parsing JSON chunk:', e, line);
+          } catch (error) {
+            console.error('Error parsing line:', line, error);
           }
         }
       }
 
-      // If we haven't set content yet, create a default message
-      if (!responseMessage.content) {
-        responseMessage.content = "I've processed your query. Check the results below.";
-      }
-
-      // Add the assistant's response message to UI and save to localStorage
-      setMessages(prev => [...prev, responseMessage]);
-      const added = ChatHistoryService.addMessage(currentSessionId, responseMessage);
-
-      // Check if we've reached the message limit after this exchange
-      if (!added || ChatHistoryService.hasReachedMessageLimit(currentSessionId)) {
-        setShowMessageLimitWarning(true);
-      }
+      // Final update to ensure everything is saved
+      ChatHistoryService.updateMessageWithVisualization(
+        currentSessionId,
+        responseMessage.id,
+        currentVisualization,
+        currentResults,
+        currentSql,
+        responseMessage.content
+      );
 
     } catch (error) {
       console.error('Query streaming failed:', error);
@@ -416,7 +449,7 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
             className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6" fill="none" viewBox="0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>

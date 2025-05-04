@@ -1,4 +1,9 @@
-import { ChatMessage, ChatSession } from "@/types";
+import {
+  ChatMessage,
+  ChatSession,
+  VisualizationData,
+  QueryResult,
+} from "@/types";
 
 const STORAGE_KEY = "chatSessions";
 const MAX_MESSAGES_PER_CHAT = 6;
@@ -69,34 +74,43 @@ export const ChatHistoryService = {
   /**
    * Add a message to a specific session
    */
-  addMessage(sessionId: string, message: ChatMessage): boolean {
-    const sessions = this.getAllSessions();
-    const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
+  addMessage(sessionId: string, message: ChatMessage): void {
+    if (typeof window === "undefined") return;
 
-    if (sessionIndex === -1) return false;
+    try {
+      const sessions = this.getAllSessions();
+      const index = sessions.findIndex((s) => s.id === sessionId);
 
-    // Check if this session has reached the message limit
-    if (sessions[sessionIndex].messages.length >= MAX_MESSAGES_PER_CHAT) {
-      return false;
+      if (index !== -1) {
+        // Create a deep copy of the message that can be properly serialized
+        const serializableMessage = {
+          ...message,
+          // Ensure Date objects are converted to strings
+          timestamp:
+            message.timestamp instanceof Date
+              ? message.timestamp.toISOString()
+              : message.timestamp,
+        };
+
+        sessions[index].messages.push(serializableMessage);
+
+        // Update the title if this is a user message and the first one
+        if (
+          message.role === "user" &&
+          sessions[index].messages.filter((m) => m.role === "user").length === 1
+        ) {
+          // Truncate to a reasonable length for title
+          sessions[index].title =
+            message.content.length > 40
+              ? message.content.substring(0, 40) + "..."
+              : message.content;
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      }
+    } catch (error) {
+      console.error("Error adding chat message:", error);
     }
-
-    // Add the message
-    sessions[sessionIndex].messages.push(message);
-
-    // Update the session title if it's the first user message
-    if (
-      message.role === "user" &&
-      sessions[sessionIndex].messages.length === 1
-    ) {
-      sessions[sessionIndex].title =
-        message.content.substring(0, 30) +
-        (message.content.length > 30 ? "..." : "");
-    }
-
-    // Save to localStorage
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-
-    return true;
   },
 
   /**
@@ -193,5 +207,83 @@ export const ChatHistoryService = {
    */
   getMaxMessagesPerChat(): number {
     return MAX_MESSAGES_PER_CHAT;
+  },
+
+  /**
+   * Update a message with visualization data and query results
+   */
+  updateMessageWithVisualization(
+    sessionId: string,
+    messageId: string,
+    visualization: VisualizationData | null,
+    results: QueryResult | null,
+    sql: string | null = null,
+    content: string | null = null
+    // sessionId: string,
+    // messageId: string,
+    // visualization: VisualizationData,
+    // results: QueryResult | null,
+    // sql: string | null = null,
+    // content: string | null = null
+  ): void {
+    if (typeof window === "undefined") return;
+
+    try {
+      const sessions = this.getAllSessions();
+      const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
+
+      if (sessionIndex !== -1) {
+        const messageIndex = sessions[sessionIndex].messages.findIndex(
+          (m) => m.id === messageId
+        );
+
+        if (messageIndex !== -1) {
+          // Update the message with all the streaming data
+          sessions[sessionIndex].messages[messageIndex] = {
+            ...sessions[sessionIndex].messages[messageIndex],
+            // Always save these fields even if undefined to maintain consistency
+            visualization: visualization || undefined,
+            results: results || undefined,
+            sql: sql || undefined,
+            // If new content is provided, update the message content
+            ...(content ? { content } : {}),
+          };
+
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        }
+      }
+    } catch (error) {
+      console.error("Error updating message with visualization:", error);
+    }
+  },
+
+  /**
+   * Update a message with new content (for streaming)
+   */
+  updateMessageContent(
+    sessionId: string,
+    messageId: string,
+    content: string
+  ): void {
+    if (typeof window === "undefined") return;
+
+    try {
+      const sessions = this.getAllSessions();
+      const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
+
+      if (sessionIndex !== -1) {
+        const messageIndex = sessions[sessionIndex].messages.findIndex(
+          (m) => m.id === messageId
+        );
+
+        if (messageIndex !== -1) {
+          // Update just the content of the message
+          sessions[sessionIndex].messages[messageIndex].content = content;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        }
+      }
+    } catch (error) {
+      console.error("Error updating message content:", error);
+    }
   },
 };
