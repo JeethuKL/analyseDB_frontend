@@ -21,14 +21,40 @@ export const ChatSidebar = ({
 
   // Load chat sessions from local storage
   useEffect(() => {
-    setChatSessions(ChatHistoryService.getAllSessions());
+    // Filter out empty sessions or sessions with no meaningful messages
+    const sessions = ChatHistoryService.getAllSessions().filter(session => {
+      // Check if session has any messages
+      if (!session.messages || session.messages.length === 0) {
+        return false;
+      }
+      
+      // Check if session has at least one user message (filter out sessions with only system messages)
+      return session.messages.some(msg => 
+        msg.role === 'user' && 
+        msg.content && 
+        msg.content.trim() !== ''
+      );
+    });
+    
+    setChatSessions(sessions);
   }, [currentSessionId]); // Refresh when current session changes
 
   const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this chat?')) {
       ChatHistoryService.deleteSession(sessionId);
-      setChatSessions(ChatHistoryService.getAllSessions());
+      
+      // Filter the sessions after deletion
+      setChatSessions(ChatHistoryService.getAllSessions().filter(session => {
+        if (!session.messages || session.messages.length === 0) {
+          return false;
+        }
+        return session.messages.some(msg => 
+          msg.role === 'user' && 
+          msg.content && 
+          msg.content.trim() !== ''
+        );
+      }));
       
       // If the deleted session is the current one, create a new chat
       if (sessionId === currentSessionId) {
@@ -66,7 +92,7 @@ export const ChatSidebar = ({
         </div>
         
         {/* New Chat button */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        {/* <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={onNewChat}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded flex items-center justify-center"
@@ -76,7 +102,7 @@ export const ChatSidebar = ({
             </svg>
             New Chat
           </button>
-        </div>
+        </div> */}
         
         {/* Chat history list */}
         <div className="flex-1 overflow-y-auto p-2">

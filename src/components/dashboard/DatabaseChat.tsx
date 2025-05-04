@@ -137,6 +137,14 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
     setCurrentStatus('Processing your query...');
 
     try {
+      // Get previous context - last 5 messages maximum
+      const previousContext = messages
+        .slice(-5) // Take up to 5 previous messages for context
+        .map(msg => ({ 
+          role: msg.role, 
+          content: msg.content 
+        }));
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/query/stream`, {
         method: 'POST',
         headers: {
@@ -145,7 +153,8 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
         },
         body: JSON.stringify({
           message: userMessage.content,
-          user_id: String(user?.id)
+          user_id: String(user?.id),
+          previous_messages: previousContext // Add previous messages for context
         })
       });
 
@@ -369,41 +378,65 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg flex flex-col h-[600px]">
+    <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg flex flex-col h-[calc(100vh-6rem)] overflow-hidden">
       {/* Chat header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 z-10 sticky top-0">
         <div>
           <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
             Database Chat
           </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Ask questions about your database using natural language
-          </p>
+          <div className="mt-1 flex items-center">
+            <div className={`h-2 w-2 rounded-full mr-2 ${isDatabaseConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isDatabaseConnected ? 'Connected to database' : 'Not connected to database'}
+              {!isDatabaseConnected && (
+                <button
+                  onClick={onOpenConnectionModal}
+                  className="ml-2 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                  Connect now
+                </button>
+              )}
+            </p>
+          </div>
         </div>
-
-        {/* Mobile menu button */}
-        <button
-          className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+        
+        {/* New Chat button on desktop + Mobile menu button */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleNewChat}
+            className="hidden md:flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+          >
+            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            New Chat
+          </button>
+          <button
+            className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Chat sidebar with history */}
-        <div className="w-64 shrink-0 hidden md:block border-r border-gray-200 dark:border-gray-700">
-          <ChatSidebar
-            currentSessionId={currentSessionId}
-            onSessionSelect={handleSessionSelect}
-            onNewChat={handleNewChat}
-            mobileOpen={sidebarOpen}
-            onCloseMobile={() => setSidebarOpen(false)}
-          />
+        {/* Chat sidebar with history - now with sticky positioning */}
+        <div className="w-64 shrink-0 hidden md:block border-r border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="h-full overflow-y-auto">
+            <ChatSidebar
+              currentSessionId={currentSessionId}
+              onSessionSelect={handleSessionSelect}
+              onNewChat={handleNewChat}
+              mobileOpen={sidebarOpen}
+              onCloseMobile={() => setSidebarOpen(false)}
+            />
+          </div>
         </div>
-
+        
         {/* Mobile sidebar */}
         <div className="md:hidden">
           <ChatSidebar
@@ -417,10 +450,10 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
 
         {/* Main chat area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: "calc(600px - 160px)" }}>
+          {/* Messages area - added min-height and improved padding */}
+          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scroll-pt-4">
             {messages.length === 0 && !isDatabaseConnected && (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center min-h-[calc(100%-80px)]">
                 <div className="text-center p-6 max-w-sm mx-auto">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5v14" />
@@ -441,7 +474,7 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
             )}
 
             {messages.length === 0 && isDatabaseConnected && (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center min-h-[calc(100%-80px)]">
                 <div className="text-center p-6 max-w-sm mx-auto">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -453,6 +486,9 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
                 </div>
               </div>
             )}
+
+            {/* Add top padding spacer to ensure first message is fully visible */}
+            {messages.length > 0 && <div className="h-4" />}
 
             {messages.map((message, index) => (
               <ChatMessage
@@ -505,11 +541,14 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            {/* Bottom padding spacer to ensure last message is fully visible */}
+            <div className="h-4"></div>
+
+            <div ref={messagesEndRef} className="h-4" />
           </div>
 
-          {/* Input area */}
-          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
+          {/* Input area - fixed at bottom */}
+          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-gray-800 sticky bottom-0">
             <form onSubmit={handleSendMessage} className="flex">
               <input
                 type="text"

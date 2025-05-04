@@ -5,7 +5,6 @@ import Script from 'next/script';
 import { User } from '@/types';
 import {
   Header,
-  UserSidebar,
   DatabaseChat,
   DatabaseConnectionModal,
 } from '@/components/dashboard';
@@ -93,35 +92,29 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
       {/* Load Plotly from CDN with specific version */}
       <Script
         src="https://cdn.plot.ly/plotly-2.27.1.min.js"
         strategy="afterInteractive"
       />
       
-      <Header 
-        user={user} 
-        isDatabaseConnected={databaseConnected} 
-        onOpenConnectionModal={() => setIsModalOpen(true)} 
-      />
+      {/* Fixed header */}
+      <div className="w-full">
+        <Header 
+          user={user} 
+          isDatabaseConnected={databaseConnected} 
+          onOpenConnectionModal={() => setIsModalOpen(true)} 
+        />
+      </div>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-6">
-          {/* Sidebar with user info */}
-          <div className="md:col-span-3">
-            <UserSidebar user={user} isDatabaseConnected={databaseConnected} />
-          </div>
-          
-          {/* Main chat area */}
-          <div className="md:col-span-9">
-            <DatabaseChat 
-              user={user} 
-              isDatabaseConnected={databaseConnected} 
-              onOpenConnectionModal={() => setIsModalOpen(true)} 
-            />
-          </div>
-        </div>
+      {/* Main content with proper spacing - remove fixed height */}
+      <main className="flex-1 max-w-7xl w-full mx-auto pt-4 pb-0 px-4 sm:px-6 lg:px-8 flex flex-col">
+        <DatabaseChat 
+          user={user} 
+          isDatabaseConnected={databaseConnected} 
+          onOpenConnectionModal={() => setIsModalOpen(true)} 
+        />
       </main>
 
       {/* Database Connection Modal */}

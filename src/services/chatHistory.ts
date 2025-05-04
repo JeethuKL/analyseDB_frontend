@@ -100,6 +100,65 @@ export const ChatHistoryService = {
   },
 
   /**
+   * Add a new chat session
+   */
+  addSession(session: ChatSession): void {
+    if (typeof window === "undefined") return;
+
+    // Don't save sessions without any user messages
+    if (
+      !session.messages ||
+      session.messages.length === 0 ||
+      !session.messages.some(
+        (msg) => msg.role === "user" && msg.content && msg.content.trim() !== ""
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const sessions = this.getAllSessions();
+      sessions.unshift(session);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    } catch (error) {
+      console.error("Error saving chat session:", error);
+    }
+  },
+
+  /**
+   * Save updates to a specific chat session
+   */
+  saveSession(sessionId: string, updates: Partial<ChatSession>): void {
+    if (typeof window === "undefined") return;
+
+    try {
+      const sessions = this.getAllSessions();
+      const index = sessions.findIndex((s) => s.id === sessionId);
+
+      if (index !== -1) {
+        const updatedSession = { ...sessions[index], ...updates };
+
+        // Don't save sessions without any user messages
+        const hasUserMessages = updatedSession.messages?.some(
+          (msg) =>
+            msg.role === "user" && msg.content && msg.content.trim() !== ""
+        );
+
+        if (!hasUserMessages) {
+          // If the session has no meaningful user messages, consider removing it
+          sessions.splice(index, 1);
+        } else {
+          sessions[index] = updatedSession;
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      }
+    } catch (error) {
+      console.error("Error saving chat session:", error);
+    }
+  },
+
+  /**
    * Delete a chat session
    */
   deleteSession(sessionId: string): boolean {

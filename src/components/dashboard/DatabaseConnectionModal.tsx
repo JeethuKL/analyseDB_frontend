@@ -19,13 +19,28 @@ export const DatabaseConnectionModal = ({
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
+  const [errors, setErrors] = useState<{dbUrl?: string; geminiApiKey?: string}>({});
+
+  const validateInputs = () => {
+    const newErrors: {dbUrl?: string; geminiApiKey?: string} = {};
+    let isValid = true;
+    
+    if (!dbUrl.trim()) {
+      newErrors.dbUrl = "Database URL is required";
+      isValid = false;
+    }
+    
+    if (!geminiApiKey.trim()) {
+      newErrors.geminiApiKey = "Gemini API key is required";
+      isValid = false;
+    }
+    
+    setErrors(newErrors);
+    return isValid;
+  };
 
   const handleConnect = async () => {
-    if (!dbUrl.trim()) {
-      setConnectionStatus({
-        success: false,
-        message: "Database URL is required"
-      });
+    if (!validateInputs()) {
       return;
     }
 
@@ -36,7 +51,7 @@ export const DatabaseConnectionModal = ({
       const response = await api.post('/operations/getSchema', {
         db_url: dbUrl,
         user_id: String(user?.id), // Convert to string as required by API
-        gemini_api_key: geminiApiKey.trim() || undefined
+        gemini_api_key: geminiApiKey.trim()
       });
 
       const data = response.data;
@@ -95,29 +110,43 @@ export const DatabaseConnectionModal = ({
             <input
               type="text"
               value={dbUrl}
-              onChange={(e) => setDbUrl(e.target.value)}
+              onChange={(e) => {
+                setDbUrl(e.target.value);
+                if (errors.dbUrl) setErrors({...errors, dbUrl: undefined});
+              }}
               placeholder="postgresql://username:password@localhost:5432/database"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+              className={`w-full px-3 py-2 border ${errors.dbUrl ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white`}
             />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Enter your database connection string
-            </p>
+            {errors.dbUrl ? (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dbUrl}</p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Enter your database connection string
+              </p>
+            )}
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Gemini API Key (Optional)
+              Gemini API Key <span className="text-red-500">*</span>
             </label>
             <input
               type="password"
               value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
+              onChange={(e) => {
+                setGeminiApiKey(e.target.value);
+                if (errors.geminiApiKey) setErrors({...errors, geminiApiKey: undefined});
+              }}
               placeholder="Enter your Gemini API key"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+              className={`w-full px-3 py-2 border ${errors.geminiApiKey ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white`}
             />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Google Gemini API key for enhanced schema analysis
-            </p>
+            {errors.geminiApiKey ? (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.geminiApiKey}</p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Google Gemini API key for enhanced schema analysis
+              </p>
+            )}
           </div>
 
           {connectionStatus && (
