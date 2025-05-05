@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { VisualizationData } from '@/types';
+import { SavedVisualizationsService } from '@/services/savedVisualizations';
 
 // This will hold the actual Plotly object
 let Plotly: any = null;
 
 interface VisualizationProps {
   visualization: VisualizationData;
+  noSaveButton?: boolean;
 }
 
-export const Visualization = ({ visualization }: VisualizationProps) => {
+export const Visualization = ({ visualization, noSaveButton }: VisualizationProps) => {
   const visualizationRef = useRef<HTMLDivElement>(null);
   const [visualizationId] = useState(`viz-${Math.random().toString(36).substr(2, 9)}`);
   const [plotlyLoaded, setPlotlyLoaded] = useState(false);
@@ -293,6 +295,35 @@ export const Visualization = ({ visualization }: VisualizationProps) => {
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 p-2 border-t border-gray-200 dark:border-gray-700">
         Visualization type: {visualization.type}
       </p>
+      {!noSaveButton && (
+        <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2 flex justify-end">
+          <button
+            onClick={() => {
+              const title = prompt("Enter a title for this visualization");
+              if (title) {
+                SavedVisualizationsService.saveVisualization(visualization, title);
+                alert("Visualization saved successfully!");
+              }
+            }}
+            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            <svg 
+              className="w-4 h-4 mr-1" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
+            </svg>
+            Save to Dashboard
+          </button>
+        </div>
+      )}
     </div>
   );
 };
