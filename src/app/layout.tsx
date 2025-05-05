@@ -7,8 +7,8 @@ import Script from 'next/script';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Your Product Name",
-  description: "Your product description",
+  title: "AnalyseDB AI",
+  description: "AI-powered analysis for your data",
 };
 
 export default function RootLayout({
