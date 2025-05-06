@@ -6,7 +6,7 @@ interface DatabaseConnectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  onSuccess: (tables: any[]) => void;
+  onSuccess: (tables: any) => void;
 }
 
 export const DatabaseConnectionModal = ({

@@ -53,7 +53,7 @@ export default function SignupPage() {
       });
       
       router.push('/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred during signup');
     } finally {
       setLoading(false);

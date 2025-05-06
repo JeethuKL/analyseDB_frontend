@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { AuthService } from '@/services/auth';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -26,7 +25,7 @@ export default function LoginPage() {
           window.location.href = '/dashboard';
           return;
         } catch (err) {
-          console.error('Invalid token, staying on login page');
+          console.error('Invalid token, staying on login page',err);
           AuthService.logout();
         }
       }
@@ -62,19 +61,19 @@ export default function LoginPage() {
 
       console.log('Login successful, redirecting...');
       window.location.href = '/dashboard';
-    } catch (err: any) {
+    } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.detail || 'Invalid username or password');
+      setError(err?.message || 'Invalid username or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const debugAuthState = () => {
-    const token = localStorage.getItem('accessToken');
-    console.log('Auth debug - Token exists:', !!token);
-    console.log('Auth debug - Token value:', token?.substring(0, 10) + '...');
-  };
+  // const debugAuthState = () => {
+  //   const token = localStorage.getItem('accessToken');
+  //   console.log('Auth debug - Token exists:', !!token);
+  //   console.log('Auth debug - Token value:', token?.substring(0, 10) + '...');
+  // };
 
   if (checkingAuth) {
     return (
@@ -142,18 +141,9 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-
-        <button 
-          type="button"
-          onClick={debugAuthState}
-          className="mt-4 text-sm text-gray-500 hover:text-gray-700"
-        >
-          Debug Auth
-        </button>
-
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
               Sign up
             </Link>

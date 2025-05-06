@@ -17,7 +17,7 @@ export const ChatMessage = ({
   isLastMessage 
 }: ChatMessageProps) => {
   // Always use the message's own data if available, fall back to the current data if this is the last message
-  const useMessageData = true; // Always prefer message's own data
+  // const useMessageData = true; // Always prefer message's own data
   
   const shouldDisplaySql = message.role !== 'user' && 
     (message.type === 'results' || message.type === 'correction' || message.sql);
@@ -40,10 +40,18 @@ export const ChatMessage = ({
     try {
       return new Date(message.timestamp).toLocaleTimeString();
     } catch (e) {
-      console.error('Invalid timestamp format:', message.timestamp);
+      console.error('Invalid timestamp format:', e , message.timestamp);
       return '';
     }
   };
+
+  // Add debug logging to help troubleshoot message content issues
+  console.log('Message being rendered:', { 
+    id: message.id, 
+    role: message.role, 
+    content: message.content,
+    type: message.type
+  });
 
   return (
     <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -55,7 +63,7 @@ export const ChatMessage = ({
         } ${message.type === 'error' ? 'border-l-4 border-red-500' : ''}`}
       >
         {/* Message content including any streaming text */}
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        <p className="text-sm whitespace-pre-wrap">{message.content || 'No content available'}</p>
         
         {/* Display SQL code if available */}
         {shouldDisplaySql && sqlToShow && (

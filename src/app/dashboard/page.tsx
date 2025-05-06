@@ -66,7 +66,7 @@ export default function Dashboard() {
   }, []);
 
   // Handle database connection success
-  const handleDatabaseConnected = (tables: any[]) => {
+  const handleDatabaseConnected = () => {
     setDatabaseConnected(true);
     // Trigger the "storage" event to update other components that rely on localStorage
     window.dispatchEvent(new Event('storage'));

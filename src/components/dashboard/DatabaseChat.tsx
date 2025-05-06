@@ -201,9 +201,10 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
-      // Create initial response message
-      let responseMessage: ChatMessageType = {
-        id: `assistant-msg-${Date.now()}`,
+      // Create initial response message with a unique ID based on timestamp
+      const responseId = `assistant-msg-${Date.now()}`;
+      const responseMessage: ChatMessageType = {
+        id: responseId,
         role: 'assistant',
         content: '',
         timestamp: new Date()
@@ -224,21 +225,20 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
+            console.log("Received stream event:", data); // Add this debug log
             
             switch(data.type) {
               case 'message':
+                // Handle standard message type
                 responseMessage.content += data.data || '';
                 setMessages(prev => {
-                  const updated = [...prev];
-                  const lastIndex = updated.length - 1;
-                  if (lastIndex >= 0 && updated[lastIndex].id === responseMessage.id) {
-                    updated[lastIndex] = { ...updated[lastIndex], content: responseMessage.content };
-                  }
-                  return updated;
+                  return prev.map(msg => 
+                    msg.id === responseMessage.id 
+                      ? {...msg, content: responseMessage.content} 
+                      : msg
+                  );
                 });
                 
-                // Update the message content in storage for each significant chunk
-                // This ensures the complete response is saved
                 ChatHistoryService.updateMessageContent(
                   currentSessionId,
                   responseMessage.id,
@@ -246,6 +246,34 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
                 );
                 break;
                 
+              case 'chat':
+                // Handle chat message type from backend
+                // Instead of directly modifying the responseMessage object
+                setMessages(prev => {
+                  // Find the message with the matching ID
+                  return prev.map(msg => 
+                    msg.id === responseId
+                      ? {...msg, content: (msg.content || '') + (data.message || '')}
+                      : msg
+                  );
+                });
+                
+                // Also update the local responseMessage object to keep it in sync
+                responseMessage.content += data.message || '';
+                
+                ChatHistoryService.updateMessageContent(
+                  currentSessionId,
+                  responseId,
+                  responseMessage.content
+                );
+                break;
+                
+              case 'status':
+                // Update status message
+                setCurrentStatus(data.message || 'Processing...');
+                break;
+                
+              // Keep existing cases for sql, results, visualization, etc.
               case 'sql':
                 setCurrentSql(data.data);
                 setCurrentStatus('Executing SQL query...');
@@ -394,21 +422,21 @@ export const DatabaseChat = ({ user, isDatabaseConnected, onOpenConnectionModal 
   };
 
   // Add a method to add welcome message when database is connected
-  const addWelcomeMessage = (tableCount: number) => {
-    const welcomeMessage: ChatMessageType = {
-      id: `welcome-msg-${Date.now()}`,
-      role: 'assistant',
-      content: `Database connected successfully! Found ${tableCount} tables. You can now ask questions about your data.`,
-      timestamp: new Date(),
-      type: 'status'
-    };
+  // const addWelcomeMessage = (tableCount: number) => {
+  //   const welcomeMessage: ChatMessageType = {
+  //     id: `welcome-msg-${Date.now()}`,
+  //     role: 'assistant',
+  //     content: `Database connected successfully! Found ${tableCount} tables. You can now ask questions about your data.`,
+  //     timestamp: new Date(),
+  //     type: 'status'
+  //   };
 
-    setMessages([welcomeMessage]);
+  //   setMessages([welcomeMessage]);
 
-    if (currentSessionId) {
-      ChatHistoryService.addMessage(currentSessionId, welcomeMessage);
-    }
-  };
+  //   if (currentSessionId) {
+  //     ChatHistoryService.addMessage(currentSessionId, welcomeMessage);
+  //   }
+  // };
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg flex flex-col h-[calc(100vh-6rem)] overflow-hidden">
