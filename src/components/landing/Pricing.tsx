@@ -1,4 +1,7 @@
+"use client";
 import { CheckIcon } from "@heroicons/react/24/solid";
+import { useRouter } from 'next/navigation'
+
 
 interface Tier {
   name: string;
@@ -7,6 +10,7 @@ interface Tier {
   features: string[];
   cta: string;
   highlighted: boolean;
+  isAvailable?: boolean;
 }
 
 const tiers: Tier[] = [
@@ -19,9 +23,11 @@ const tiers: Tier[] = [
       "Save charts",
       "Limited context",
       "Community support",
+      "Supports only Postgres",
     ],
     cta: "Start Free",
-    highlighted: false,
+    highlighted: true,
+    isAvailable: true,
   },
   {
     name: "Hobby",
@@ -33,9 +39,11 @@ const tiers: Tier[] = [
       "Save charts",
       "Limited context",
       "1 hour support per month",
+      "Supports only Postgres",
     ],
     cta: "Get Started",
     highlighted: false,
+    isAvailable: false,
   },
   {
     name: "Pro",
@@ -47,9 +55,11 @@ const tiers: Tier[] = [
       "Real-time data fetching",
       "Live dashboard updates",
       "2 hours support per month",
+      "Supports all databases",
     ],
     cta: "Go Pro",
-    highlighted: true,
+    highlighted: false,
+    isAvailable: false,
   },
   {
     name: "Premium",
@@ -61,26 +71,37 @@ const tiers: Tier[] = [
       "1M context limit",
       "Fully customizable dashboard",
       "4 hours support per month",
+      "Supports all databases",
     ],
     cta: "Contact Us",
     highlighted: false,
+    isAvailable: false,
   },
 ];
 
 export const Pricing = () => {
+  const router = useRouter();
+
+  const handleTierClick = (tier: Tier) => {
+    if (tier.isAvailable) {
+      router.push("/signup");
+    }
+  };
+
   return (
-    <section className="py-24 bg-gray-50" id="pricing">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl mb-4">
+    <section className="bg-gray-50 py-24" id="pricing">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+        <div className="mb-16 text-center">
+          <h2 className="mb-4 font-bold text-gray-900 text-3xl sm:text-4xl">
             Simple, transparent pricing
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Start for free, upgrade as you grow. All plans include core analytics features.
+          <p className="mx-auto max-w-2xl text-gray-600 text-lg">
+            Start for free, upgrade as you grow. All plans include core
+            analytics features.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
+        <div className="gap-6 lg:gap-8 grid grid-cols-1 lg:grid-cols-4">
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -91,29 +112,34 @@ export const Pricing = () => {
               }`}
             >
               {tier.highlighted && (
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                <span className="-top-4 left-1/2 absolute bg-indigo-600 px-4 py-1 rounded-full font-medium text-white text-sm -translate-x-1/2">
                   Most Popular
                 </span>
               )}
+              {!tier.isAvailable && (
+                <span className="top-4 right-4 absolute bg-yellow-100 px-2.5 py-0.5 rounded-full font-medium text-yellow-800 text-xs">
+                  Coming Soon
+                </span>
+              )}
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="font-semibold text-gray-900 text-lg">
                   {tier.name}
                 </h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold tracking-tight text-gray-900">
+                <div className="flex items-baseline mt-4">
+                  <span className="font-bold text-gray-900 text-4xl tracking-tight">
                     {tier.price}
                   </span>
                   {tier.period && (
-                    <span className="text-gray-500 ml-1">{tier.period}</span>
+                    <span className="ml-1 text-gray-500">{tier.period}</span>
                   )}
                 </div>
               </div>
 
-              <ul className="mb-8 space-y-4 flex-1">
+              <ul className="flex-1 space-y-4 mb-8">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex items-start">
                     <CheckIcon
-                      className="flex-shrink-0 h-6 w-6 text-green-500"
+                      className="flex-shrink-0 w-6 h-6 text-green-500"
                       aria-hidden="true"
                     />
                     <span className="ml-3 text-gray-600">{feature}</span>
@@ -122,10 +148,16 @@ export const Pricing = () => {
               </ul>
 
               <button
+                onClick={() => handleTierClick(tier)}
+                disabled={!tier.isAvailable}
                 className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                   tier.highlighted
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "bg-gray-50 text-indigo-600 hover:bg-gray-100"
+                    ? tier.isAvailable
+                      ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "bg-indigo-300 text-white cursor-not-allowed"
+                    : tier.isAvailable
+                    ? "bg-gray-50 text-indigo-600 hover:bg-gray-100"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
               >
                 {tier.cta}
@@ -135,13 +167,15 @@ export const Pricing = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Enterprise</h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="mb-4 font-semibold text-gray-900 text-xl">
+            Enterprise
+          </h3>
+          <p className="mb-6 text-gray-600">
             Custom solutions for large teams and specific needs
           </p>
-          <button className="inline-flex items-center bg-gray-900 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors">
+          <a href="mailto:sales@analyse.db" className="inline-flex items-center bg-gray-900 hover:bg-gray-800 px-6 py-3 rounded-lg font-semibold text-white text-lg transition-colors">
             Contact Sales
-          </button>
+          </a>
         </div>
       </div>
     </section>

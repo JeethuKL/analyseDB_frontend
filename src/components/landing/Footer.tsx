@@ -1,45 +1,45 @@
 export const Footer = () => {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-white border-gray-200 border-t">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-7xl">
+        <div className="gap-8 grid grid-cols-1 md:grid-cols-4">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-                <span className="text-white font-bold">A</span>
+              <div className="flex justify-center items-center bg-indigo-600 rounded-lg w-8 h-8">
+                <span className="font-bold text-white">A</span>
               </div>
-              <span className="ml-2 text-xl font-bold text-gray-900">AnalyseDB</span>
+              <span className="ml-2 font-bold text-gray-900 text-xl">AnalyseDB</span>
             </div>
-            <p className="mt-4 text-base text-gray-600 max-w-md">
+            <p className="mt-4 max-w-md text-gray-600 text-base">
               Transform your database into an actionable insights engine. Empower teams to uncover growth opportunities without technical complexity.
             </p>
             <div className="mt-4">
-              <p className="text-sm text-gray-500">
-                Support: support@analysedb.com
+              <p className="text-gray-500 text-sm">
+                Support: <a href="mailto:support@analyse.db" className="text-indigo-600 hover:text-indigo-700">support@analyse.db</a>
               </p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">Product</h3>
-            <ul className="mt-4 space-y-4">
+            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Product</h3>
+            <ul className="space-y-4 mt-4">
               <li>
-                <a href="#features" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="#features" className="text-gray-600 hover:text-gray-900 text-base">
                   Features
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="#pricing" className="text-gray-600 hover:text-gray-900 text-base">
                   Pricing
                 </a>
               </li>
               <li>
-                <a href="#security" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="#security" className="text-gray-600 hover:text-gray-900 text-base">
                   Security
                 </a>
               </li>
               <li>
-                <a href="#roadmap" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="#roadmap" className="text-gray-600 hover:text-gray-900 text-base">
                   Roadmap
                 </a>
               </li>
@@ -47,20 +47,20 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">Company</h3>
-            <ul className="mt-4 space-y-4">
+            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Company</h3>
+            <ul className="space-y-4 mt-4">
               <li>
-                <a href="/about" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="/about" className="text-gray-600 hover:text-gray-900 text-base">
                   About
                 </a>
               </li>
               <li>
-                <a href="/privacy" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="/privacy" className="text-gray-600 hover:text-gray-900 text-base">
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="/terms" className="text-base text-gray-600 hover:text-gray-900">
+                <a href="/terms" className="text-gray-600 hover:text-gray-900 text-base">
                   Terms of Service
                 </a>
               </li>
@@ -68,15 +68,15 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-gray-200 pt-8">
-          <p className="text-base text-gray-500 text-center">
+        <div className="mt-12 pt-8 border-gray-200 border-t">
+          <p className="text-gray-500 text-base text-center">
             &copy; {new Date().getFullYear()} AnalyseDB. All rights reserved.
           </p>
 
-          <div className="mt-4 flex justify-center space-x-6">
-            <div className="flex items-center text-gray-500 text-sm space-x-2">
+          {/* <div className="flex justify-center space-x-6 mt-4">
+            <div className="flex items-center space-x-2 text-gray-500 text-sm">
               <svg 
-                className="h-5 w-5" 
+                className="w-5 h-5" 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
@@ -84,9 +84,9 @@ export const Footer = () => {
               </svg>
               <span>25+ SQL/NoSQL variants supported</span>
             </div>
-            <div className="flex items-center text-gray-500 text-sm space-x-2">
+            <div className="flex items-center space-x-2 text-gray-500 text-sm">
               <svg 
-                className="h-5 w-5" 
+                className="w-5 h-5" 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
@@ -94,7 +94,7 @@ export const Footer = () => {
               </svg>
               <span>Prebuilt ETL templates</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
