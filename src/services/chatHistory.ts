@@ -48,7 +48,16 @@ export const ChatHistoryService = {
    */
   createSession(title: string = "New Chat"): ChatSession {
     const sessions = this.getAllSessions();
-
+    // Prevent creating a new session if the last session has no user messages
+    if (sessions.length > 0) {
+      const lastSession = sessions[0];
+      const hasUserMessages = lastSession.messages?.some(
+        (msg) => msg.role === "user" && msg.content && msg.content.trim() !== ""
+      );
+      if (!hasUserMessages) {
+        return lastSession;
+      }
+    }
     // Create a new session
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
@@ -56,18 +65,14 @@ export const ChatHistoryService = {
       createdAt: new Date().toISOString(),
       messages: [],
     };
-
     // Add the new session to the beginning of the list
     const updatedSessions = [newSession, ...sessions];
-
-    // Limit the number of sessions
+    // Limit the number of sessions, but do not delete old sessions unless limit is exceeded
     if (updatedSessions.length > MAX_SESSIONS) {
-      updatedSessions.pop();
+      updatedSessions.length = MAX_SESSIONS;
     }
-
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSessions));
-
     return newSession;
   },
 
